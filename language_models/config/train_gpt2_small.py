@@ -32,7 +32,8 @@ grad_clip = 1.0 # clip gradients at this value, or disable if == 0.0
 # learning rate decay settings
 decay_lr = True # whether to decay the learning rate
 warmup_iters = 2000 # how many steps to warm up for
-min_lr = 3e-5 
+min_lr = 3e-5
+hessian_interval = 1000  # compute Hessian every 1000 steps after warmup
 dtype = 'float32'
 # use_minibatch = True
 # plot_histogram = False
