@@ -78,6 +78,7 @@ use_minibatch = True
 layer_by_layer = False
 flash_attn = False
 sample_layer = []
+hessian_interval = 0  # compute Hessian every N iters during LR decay; 0 disables
 # DDP settings
 backend = 'nccl' # 'nccl', 'gloo', etc.
 # system
@@ -283,23 +284,23 @@ def get_lr(it):
 X, Y = get_batch('train') # fetch the very first batch
 
 
-def plot_hessian():
-    
+def plot_hessian(ckpt_iteration):
+
 
     batch_size = 8
     gradient_accumulation_steps = 60
     use_minibatch = True
 
-    hessian = hessian_spectrum.Hessian(model, ckpt_iteration = load_iter, train_data = train_data, batch_size= batch_size, block_size= block_size,  ctx = ctx, use_minibatch = use_minibatch, gradient_accumulation_steps = gradient_accumulation_steps, device = device, sample_layer = sample_layer, comment = comment)
-
-    
-
-    hessian.get_spectrum(layer_by_layer = True)
-    hessian.load_curve(layer_by_layer = True)
+    hessian = hessian_spectrum.Hessian(model, ckpt_iteration=ckpt_iteration, train_data=train_data, batch_size=batch_size, block_size=block_size, ctx=ctx, use_minibatch=use_minibatch, gradient_accumulation_steps=gradient_accumulation_steps, device=device, sample_layer=sample_layer, comment=comment)
 
 
-    hessian.get_spectrum(layer_by_layer = False)
-    hessian.load_curve(layer_by_layer = False)
+
+    hessian.get_spectrum(layer_by_layer=True)
+    hessian.load_curve(layer_by_layer=True)
+
+
+    hessian.get_spectrum(layer_by_layer=False)
+    hessian.load_curve(layer_by_layer=False)
 
 
 
@@ -338,6 +339,8 @@ def train():
             print(f"saving checkpoint to {out_dir}")
             
             torch.save(checkpoint, os.path.join(out_dir, 'ckpt'+str(iter_num)+'.pt'))
+        if decay_lr and hessian_interval > 0 and iter_num >= warmup_iters and (iter_num - warmup_iters) % hessian_interval == 0 and master_process:
+            plot_hessian(iter_num)
         if iter_num == 0 and eval_only:
             break
 
@@ -392,6 +395,5 @@ def train():
         destroy_process_group()
 
 
-plot_hessian()
-#
-train()
+if __name__ == "__main__":
+    train()
